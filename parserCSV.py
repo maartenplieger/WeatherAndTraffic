@@ -39,9 +39,6 @@ test["minute"] = test["minuut"].map(lambda x: padMinute(x))
 test["TimeStamp"] = pandas.to_datetime(test["year"]+test["month"]+test["day"]+test["hour"]+test["minute"], format='%Y%b%d%H%M')
 test["TimeRounded"] = test["TimeStamp"].map(lambda x: tenMin_datetime(x))
 
-print("pippo")
-
-
 
 fileOutName="createncpoint.nc"
 
@@ -50,18 +47,20 @@ fileOutName="createncpoint.nc"
 latvar = []
 lonvar = []
 ernong = []
-ndeath = []
+nDeath = []
+nHospital = []
+aardong = []
 
 
 print(test.shape)
 
-#latvar.append( 51.913368);
-#lonvar.append( 6.294848);
-#pointvar.append(1);
+
 latvar.append(test["X"].values)
 lonvar.append(test["Y"].values)
 ernong.append(test["ernong"].values)
-ndeath.append(test["N_Slacht_dood"].values)
+nDeath.append(test["N_Slacht_dood"].values)
+nHospital.append(test["N_Slacht_Zh"].values)
+aardong.append(test["Aardong"].values)
 
 numpoints=test.shape[0]
 
@@ -105,7 +104,9 @@ lon[:] = [lonvar]
 #timevar[:] = test["TimeRounded"].values
 
 ErnongVar[:] = ernong[0]
-N_Slacht_doodVar [:] = [ndeath]
+N_Slacht_doodVar [:] = [nDeath]
+N_Slacht_ZhVar [:] = [nHospital]
+AardongVar [:] = aardong[0]
 
 
 ncfile.featureType = "timeSeries";
