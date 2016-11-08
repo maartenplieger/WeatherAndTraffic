@@ -40,6 +40,7 @@ test["TimeStamp"] = pandas.to_datetime(test["year"]+test["month"]+test["day"]+te
 test["TimeRounded"] = test["TimeStamp"].map(lambda x: tenMin_datetime(x))
 
 
+
 fileOutName="createncpoint.nc"
 
 
@@ -50,6 +51,13 @@ ernong = []
 nDeath = []
 nHospital = []
 aardong = []
+loctypon = []
+nCars = []
+nBikes = []
+nScooters = []
+nPedestrians = []
+niveauKop = []
+timeNC = []
 
 
 print(test.shape)
@@ -61,6 +69,16 @@ ernong.append(test["ernong"].values)
 nDeath.append(test["N_Slacht_dood"].values)
 nHospital.append(test["N_Slacht_Zh"].values)
 aardong.append(test["Aardong"].values)
+loctypon.append(test["loctypon"].values)
+nCars.append(test["N_Personenauto"].values)
+nBikes.append(test["N_Fiets"].values)
+nScooters.append(test["N_Brom_snorfiets"].values)
+nPedestrians.append(test["N_Voetganger"].values)
+niveauKop.append(test["Niveaukop"].values)
+timeNC.append(test["TimeRounded"].values)
+#print(timeNC)
+
+
 
 numpoints=test.shape[0]
 
@@ -101,12 +119,18 @@ N_VoetgangerVar = ncfile.createVariable('NVoetgangers','u8', ('stringDim'))
 
 lat[:] = [latvar]
 lon[:] = [lonvar]
-#timevar[:] = test["TimeRounded"].values
-
+timevar[:] = netCDF4.date2num(timeNC, "seconds since 1970-01-01 00:00:00")
 ErnongVar[:] = ernong[0]
+NiveaukopVar[:] = niveauKop[0]
 N_Slacht_doodVar [:] = [nDeath]
 N_Slacht_ZhVar [:] = [nHospital]
 AardongVar [:] = aardong[0]
+LoctyponVar [:] = loctypon[0]
+N_PersonenautoVar[:] = [nCars]
+N_Brom_snorfietsVar[:] = [nScooters]
+N_FietsVar[:] = [nBikes]
+N_PersonenautoVar[:] = [nCars]
+N_VoetgangerVar[:] = [nPedestrians]
 
 
 ncfile.featureType = "timeSeries";
