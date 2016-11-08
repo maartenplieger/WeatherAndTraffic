@@ -1,27 +1,29 @@
 import pandas
 import netCDF4
+import numpy as np
 
 from datetime import date, timedelta, datetime, time
 
-filePath = "../KNMI-DiTTLab-SWOV/ExportOngevalsData.csv"
-fileTest = "test.csv"
-
-v1 = []
-v2 = []
-v3 = []
-v4 = []
 
 
-test = pandas.read_csv(fileTest)
-
+## Padding of the minute with a zero if represented by one digit.
+## For non compliant format (i.e., "Onbekend" string situation) a 0 minute is set.
+#   @param string representing the minute.
+#   @return padded string
 def padMinute(x):
-    x =int(x)
-    if (x <= 9):
-        x = str.zfill(str(x), 2)
+    try:
+        x =int(x)
+        if (x <= 9):
+            x = str.zfill(str(x), 2)
+    except ValueError:
+        #print("Error minute:"+x)
+        x=0
     return str(x)
 
 
-
+## The time is approximated to the closest 10-minute value.
+#   @param datetime variable.
+#   @return datetime variable approximated.
 def tenMin_datetime(dt):
     reminder = (dt.minute%10)
     if reminder <=4:
@@ -31,20 +33,58 @@ def tenMin_datetime(dt):
     return dt.replace(minute=0, second=0)+timedelta(minutes=minute)
 
 
-test["hour"] = test['Uur'].map(lambda x: str(x).split("-")[1].split(".")[0])
-test["day"] = test["datum"].map(lambda x: str(x)[:2])
-test["month"] = test["datum"].map(lambda x: str(x)[2:5])
-test["year"] = test["datum"].map(lambda x: "20"+str(x)[5:])
-test["minute"] = test["minuut"].map(lambda x: padMinute(x))
-test["TimeStamp"] = pandas.to_datetime(test["year"]+test["month"]+test["day"]+test["hour"]+test["minute"], format='%Y%b%d%H%M')
-test["TimeRounded"] = test["TimeStamp"].map(lambda x: tenMin_datetime(x))
+## Hours are read from the string format and if in the right format parsed.
+## For non compliant format (i.e., "Onbekend" string situation) a 0 hour is set.
+#   @param string representing the minute.
+#   @return padded string
+def convertHour(x):
+    xx = ""
+    try:
+        xx = str(x).split("-")[1].split(".")[0]
+    except IndexError:
+        #print("error:" + x)
+        xx = str(0)
+    return(xx)
 
 
 
-fileOutName="createncpoint.nc"
+
+## Minute field (original from the dataset) is check for non compliant values.
+#   @param string representing the minute.
+#   @return string with TRUE if correct format, FALSE otherwise.
+def isCorrect(x):
+    if x=="Onbekend":
+        x="FALSE"
+    else:
+        x="TRUE"
+    return(x)
 
 
 
+
+filePath = "../KNMI-DiTTLab-SWOV/ExportOngevalsData.csv"
+fileTest = "test.csv"
+
+##read in the csv data as dataframe
+dataFrame = pandas.read_csv(fileTest)
+
+dataFrame["hour"] = dataFrame['Uur'].map(lambda x: convertHour(x))
+dataFrame["day"] = dataFrame["datum"].map(lambda x: str(x)[:2])
+dataFrame["month"] = dataFrame["datum"].map(lambda x: str(x)[2:5])
+dataFrame["year"] = dataFrame["datum"].map(lambda x: "20" + str(x)[5:])
+dataFrame["minute"] = dataFrame["minuut"].map(lambda x: padMinute(x))
+dataFrame["error"] = dataFrame["minuut"].map(lambda x: isCorrect(x))
+timeStampToConvert = dataFrame["year"] + dataFrame["month"] + dataFrame["day"] + dataFrame["hour"] + dataFrame["minute"]
+dataFrame["TimeStamp"] = pandas.to_datetime(timeStampToConvert, format='%Y%b%d%H%M', unit='s')
+#print(test["TimeStamp"].values)
+dataFrame["TimeRounded"] = dataFrame["TimeStamp"].map(lambda x: tenMin_datetime(x))
+
+
+
+fileOutName="SWOVData.nc"
+
+
+##list variables to store data
 latvar = []
 lonvar = []
 ernong = []
@@ -58,33 +98,40 @@ nScooters = []
 nPedestrians = []
 niveauKop = []
 timeNC = []
+errorInDateTime = []
 
 
-print(test.shape)
+#print(test.shape)
+
+##lists are filled with values of the data frame
+latvar.append(dataFrame["X"].values)
+lonvar.append(dataFrame["Y"].values)
+ernong.append(dataFrame["ernong"].values)
+nDeath.append(dataFrame["N_Slacht_dood"].values)
+nHospital.append(dataFrame["N_Slacht_Zh"].values)
+aardong.append(dataFrame["Aardong"].values)
+loctypon.append(dataFrame["loctypon"].values)
+nCars.append(dataFrame["N_Personenauto"].values)
+nBikes.append(dataFrame["N_Fiets"].values)
+nScooters.append(dataFrame["N_Brom_snorfiets"].values)
+nPedestrians.append(dataFrame["N_Voetganger"].values)
+niveauKop.append(dataFrame["Niveaukop"].values)
+timeNC.append(pandas.to_datetime(dataFrame["TimeRounded"].values))
+errorInDateTime.append(dataFrame["error"].values)
+
+# print(pandas.to_datetime(timeNC[0]).strftime("%s"))
+# print(timeNC)
+# print(test["TimeRounded"].values)
 
 
-latvar.append(test["X"].values)
-lonvar.append(test["Y"].values)
-ernong.append(test["ernong"].values)
-nDeath.append(test["N_Slacht_dood"].values)
-nHospital.append(test["N_Slacht_Zh"].values)
-aardong.append(test["Aardong"].values)
-loctypon.append(test["loctypon"].values)
-nCars.append(test["N_Personenauto"].values)
-nBikes.append(test["N_Fiets"].values)
-nScooters.append(test["N_Brom_snorfiets"].values)
-nPedestrians.append(test["N_Voetganger"].values)
-niveauKop.append(test["Niveaukop"].values)
-timeNC.append(test["TimeRounded"].values)
-#print(timeNC)
+
+numpoints=dataFrame.shape[0]
 
 
-
-numpoints=test.shape[0]
-
+##NetCDF file and variables are created
 
 ncfile = netCDF4.Dataset(fileOutName,'w')
-obs_dim = ncfile.createDimension('obs', numpoints)     # latitude axis
+obs_dim = ncfile.createDimension('obs', numpoints)
 time_dim=ncfile.createDimension('time', numpoints)
 
 lat = ncfile.createVariable('lat', 'd', ('obs'))
@@ -94,7 +141,7 @@ lon = ncfile.createVariable('lon', 'd', ('obs'))
 lon.units = 'degrees_east'
 lon.standard_name = 'longitude'
 
-timevar =  ncfile.createVariable('time', 'd', ('time'))
+timevar =  ncfile.createVariable('time', 'u8', ('time'))
 timevar.units="seconds since 1970-01-01 00:00:00"
 timevar.standard_name='time'
 
@@ -110,16 +157,15 @@ N_PersonenautoVar = ncfile.createVariable('NPersoneauto','u8', ('stringDim'))
 N_Brom_snorfietsVar = ncfile.createVariable('NBromSnorfiets','u8', ('stringDim'))
 N_FietsVar = ncfile.createVariable('NFiets','u8', ('stringDim'))
 N_VoetgangerVar = ncfile.createVariable('NVoetgangers','u8', ('stringDim'))
+errorInDateTimeVar = ncfile.createVariable('TimeIsOK', str, ('stringDim'))
 
 
 
-#floatVar.units = 'km'
-#floatVar.standard_name = 'distance'
-
+##NetCDF variables and file are filled with the list data
 
 lat[:] = [latvar]
 lon[:] = [lonvar]
-timevar[:] = netCDF4.date2num(timeNC, "seconds since 1970-01-01 00:00:00")
+timevar[:] =  np.array(timeNC[0], dtype='datetime64[s]')
 ErnongVar[:] = ernong[0]
 NiveaukopVar[:] = niveauKop[0]
 N_Slacht_doodVar [:] = [nDeath]
@@ -131,8 +177,9 @@ N_Brom_snorfietsVar[:] = [nScooters]
 N_FietsVar[:] = [nBikes]
 N_PersonenautoVar[:] = [nCars]
 N_VoetgangerVar[:] = [nPedestrians]
+errorInDateTimeVar[:] = errorInDateTime[0]
 
 
-ncfile.featureType = "timeSeries";
-ncfile.Conventions = "CF-1.4";
+ncfile.featureType = "timeSeries"
+ncfile.Conventions = "CF-1.4"
 ncfile.close()
