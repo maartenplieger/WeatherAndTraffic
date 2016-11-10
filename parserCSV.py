@@ -64,7 +64,7 @@ def isCorrect(x):
 
 
 def createNetCDF(dataFrame, fileNumber):
-    fileOutName = "SWOVDataFull"+str(fileNumber)+".nc"
+    fileOutName = "/nobackup/users/pagani/weatherTraffic/SWOVDataFull"+str(fileNumber)+".nc"
 
     ##definition of the projections
     wgs84 = pyproj.Proj("+init=EPSG:4326")
