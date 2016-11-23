@@ -2,8 +2,23 @@ import pandas
 import netCDF4
 import numpy as np
 import pyproj
+import os
+import time as tt
+import tqdm as tqdm
 
+import pytz
 from datetime import date, timedelta, datetime, time
+
+
+
+
+def checkDirectory(year, month, day, outputDir):
+    dirToCheck = outputDir+str(year)+"/"+str.zfill(str(month), 2)+"/"+str.zfill(str(day), 2)+"/"
+    dirExists = os.path.exists(dirToCheck)
+    if(dirExists == False):
+        os.makedirs(dirToCheck)
+    return(dirToCheck)
+
 
 
 
@@ -63,8 +78,10 @@ def isCorrect(x):
     return(x)
 
 
-def createNetCDF(dataFrame, fileNumber):
-    fileOutName = "/nobackup/users/pagani/weatherTraffic/SWOVDataFull"+str(fileNumber)+".nc"
+def createNetCDF(dataFrame, directoryToWriteTo):
+    #fileOutName = "/nobackup/users/pagani/weatherTraffic/SWOVDataFull"+str(fileNumber)+".nc"
+    time = dataFrame["TimeRounded"].iloc[0].strftime("%Y%m%d%H%M%S")
+    fileOutName = directoryToWriteTo+"SWOVDataFull_"+str(time)+".nc"
 
     ##definition of the projections
     wgs84 = pyproj.Proj("+init=EPSG:4326")
@@ -174,8 +191,9 @@ def createNetCDF(dataFrame, fileNumber):
 
 filePath = "../KNMI-DiTTLab-SWOV/ExportOngevalsData.csv"
 fileTest = "test.csv"
+outputDir = "/nobackup/users/pagani/weatherTraffic/"
 
-##read in the csv data as dataframe
+##read in the csv data as dataframegreen231
 dataFrame = pandas.read_csv(filePath)
 
 dataFrame["hour"] = dataFrame['Uur'].map(lambda x: convertHour(x))
@@ -185,7 +203,18 @@ dataFrame["year"] = dataFrame["datum"].map(lambda x: "20" + str(x)[5:])
 dataFrame["minute"] = dataFrame["minuut"].map(lambda x: padMinute(x))
 dataFrame["NoError"] = dataFrame["minuut"].map(lambda x: isCorrect(x))
 timeStampToConvert = dataFrame["year"] + dataFrame["month"] + dataFrame["day"] + dataFrame["hour"] + dataFrame["minute"]
-dataFrame["TimeStamp"] = pandas.to_datetime(timeStampToConvert, format='%Y%b%d%H%M', unit='s')
+dataFrame["TimeStamp"] = pandas.to_datetime(timeStampToConvert, format='%Y%b%d%H%M')#, unit='s')
+#dataFrame["TimeStamp"] =
+
+
+try:
+    dataFrame["TimeStamp"] = np.asarray(pandas.DatetimeIndex(pandas.to_datetime(timeStampToConvert, format='%Y%b%d%H%M')).tz_localize(pytz.timezone("Europe/Amsterdam"), ambiguous='infer'))
+except (pytz.NonExistentTimeError, pytz.AmbiguousTimeError):
+    ##some recording of the accidents are not in line with the DST changes: hours that do not exist or are ambiguous. The approach used is to add 1 hour in this corner cases
+    newTime = pandas.DatetimeIndex(pandas.to_datetime(timeStampToConvert, format='%Y%b%d%H%M') + timedelta(hours=1))
+    #print("new time is "+str(newTime))
+    dataFrame["TimeStamp"] = np.asarray(newTime) #.tz_localize(
+        #pytz.timezone("Europe/Amsterdam"),ambiguous='infer'))
 #print(test["TimeStamp"].values)
 dataFrame["TimeRounded"] = dataFrame["TimeStamp"].map(lambda x: tenMin_datetime(x))
 
@@ -198,10 +227,16 @@ iterVar = 0
 
 timeGroups = test['TimeRounded'].unique()
 
-for timeSlice in timeGroups:
+for timeSlice in tqdm.tqdm(timeGroups):
+    #print(timeSlice)
+    dateTimeObj = datetime.fromtimestamp(timeSlice.astype(datetime)/1e9, tz=pytz.timezone("Europe/Amsterdam"))
+    #print(dateTimeObj)
+    year = dateTimeObj.year
+    month = dateTimeObj.month
+    day = dateTimeObj.day
+    directoryToWriteTo = checkDirectory(year, month, day, outputDir)
     testDF = test[test['TimeRounded'] == timeSlice]
-    createNetCDF(testDF, iterVar)
-    iterVar +=1
+    createNetCDF(testDF, directoryToWriteTo)
     #print(outfilename)
     #df[df['Gene'] == gene].to_csv(outfilename)
 
