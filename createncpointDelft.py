@@ -26,15 +26,16 @@ latvar.extend( [52.090825, 52.090825]);
 lonvar.extend( [5.122388,5.18]);
 pointvar.extend([1,2]);
 speedVar.extend([55,66]);
-flowVar.extend([1500,1800]);
+flowVar.append(1500)
+flowVar.append(1800)
 distVar.extend([44,99])
 numpoints=len(pointvar)
 
 
 ncfile = netCDF4.Dataset(fileOutName,'w')
-obs_dim = ncfile.createDimension('obs', numpoints)     # latitude axis
-time_dim=ncfile.createDimension('time', 2)
-detector_dim=ncfile.createDimension('detectorDist', 2)
+obs_dim = ncfile.createDimension('obs', 2)     # latitude axis
+time_dim=ncfile.createDimension('time', None)
+#detector_dim=ncfile.createDimension('detectorDist', 2)
 
 lat = ncfile.createVariable('lat', 'd', ('obs'))
 lat.units = 'degrees_north'
@@ -47,11 +48,11 @@ dist = ncfile.createVariable('distance', 'd', ('obs'))
 dist.units = 'meters'
 dist.standard_name = 'distance'
 
-speed = ncfile.createVariable('speed', 'd', ('obs'))
+speed = ncfile.createVariable('speed', 'd', ( 'obs','time'))
 speed.units = 'km/h'
 speed.standard_name = 'kilometer_per_hour'
 
-flow = ncfile.createVariable('flow', 'd', ('obs'))
+flow = ncfile.createVariable('flow', 'd', ('obs', 'time'))
 flow.units = 'veh/h/lane'
 flow.standard_name = 'vehicle_per_hour_per_lane'
 
@@ -64,17 +65,26 @@ timevar.standard_name='time'
 #floatVar.standard_name = 'distance'
 
 
-lat[:] = [latvar]
-lon[:] = [lonvar]
-speed[:] = [speedVar]
-flow[:] = [flowVar]
-dist[:] = [distVar]
 
 test  = netCDF4.date2num(datetime.datetime.now(), "seconds since 1970-01-01 00:00:00")
+test1 = netCDF4.date2num(datetime.datetime.now()- datetime.timedelta(minutes=20), "seconds since 1970-01-01 00:00:00")
 
 times = [datetime.datetime.now(), datetime.datetime.now() - datetime.timedelta(minutes=20)]
 
 timevar[:] = np.array(times, dtype='datetime64[s]')
+
+#timevar[:] = [test,test1]
+
+lat[:] = latvar
+lon[:] = lonvar
+#speed[:] = speedVar
+flow[:] = flowVar
+dist[:] = distVar
+
+
+
+
+
 #timevar[:] = , "seconds since 1970-01-01 00:00:00")
 
 #floatVar[:] = pointvar
