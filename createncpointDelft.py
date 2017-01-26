@@ -5,7 +5,7 @@ from random import randint
 
 
 
-fileOutName="TUDExample.nc"
+fileOutName="TUDExample2.nc"
 
 
 latvar = []
@@ -14,6 +14,7 @@ pointvar = []
 speedVar = []
 flowVar = []
 distVar = []
+timevar = []
 
 
 
@@ -33,7 +34,7 @@ numpoints=len(pointvar)
 ncfile = netCDF4.Dataset(fileOutName,'w')
 obs_dim = ncfile.createDimension('obs', numpoints)     # latitude axis
 time_dim=ncfile.createDimension('time', 2)
-detector_dim=ncfile.createDimension('detectorDist', 1)
+detector_dim=ncfile.createDimension('detectorDist', 2)
 
 lat = ncfile.createVariable('lat', 'd', ('obs'))
 lat.units = 'degrees_north'
