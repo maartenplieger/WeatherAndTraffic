@@ -5,7 +5,7 @@ from random import randint
 
 
 
-fileOutName="TUDExample2.nc"
+fileOutName="TUDExample33.nc"
 
 
 latvar = []
@@ -33,26 +33,27 @@ numpoints=len(pointvar)
 
 
 ncfile = netCDF4.Dataset(fileOutName,'w')
-obs_dim = ncfile.createDimension('obs', 2)     # latitude axis
 time_dim=ncfile.createDimension('time', None)
+#lat_dim = ncfile.createDimension('lat', 2)
+#lon_dim = ncfile.createDimension('lon',2)
 #detector_dim=ncfile.createDimension('detectorDist', 2)
 
-lat = ncfile.createVariable('lat', 'd', ('obs'))
+lat = ncfile.createVariable('lat', 'd', ('time'))
 lat.units = 'degrees_north'
 lat.standard_name = 'latitude'
-lon = ncfile.createVariable('lon', 'd', ('obs'))
+lon = ncfile.createVariable('lon', 'd', ('time'))
 lon.units = 'degrees_east'
 lon.standard_name = 'longitude'
 
-dist = ncfile.createVariable('distance', 'd', ('obs'))
+dist = ncfile.createVariable('distance', 'd', ('time'))
 dist.units = 'meters'
 dist.standard_name = 'distance'
 
-speed = ncfile.createVariable('speed', 'd', ( 'obs','time'))
+speed = ncfile.createVariable('speed', 'd', ( 'time'))
 speed.units = 'km/h'
 speed.standard_name = 'kilometer_per_hour'
 
-flow = ncfile.createVariable('flow', 'd', ('obs', 'time'))
+flow = ncfile.createVariable('flow', 'd', ('time'))
 flow.units = 'veh/h/lane'
 flow.standard_name = 'vehicle_per_hour_per_lane'
 
@@ -69,6 +70,8 @@ timevar.standard_name='time'
 test  = netCDF4.date2num(datetime.datetime.now(), "seconds since 1970-01-01 00:00:00")
 test1 = netCDF4.date2num(datetime.datetime.now()- datetime.timedelta(minutes=20), "seconds since 1970-01-01 00:00:00")
 
+testList = [test,test1]
+
 times = [datetime.datetime.now(), datetime.datetime.now() - datetime.timedelta(minutes=20)]
 
 timevar[:] = np.array(times, dtype='datetime64[s]')
@@ -77,7 +80,7 @@ timevar[:] = np.array(times, dtype='datetime64[s]')
 
 lat[:] = latvar
 lon[:] = lonvar
-#speed[:] = speedVar
+speed[:] = speedVar
 flow[:] = flowVar
 dist[:] = distVar
 
